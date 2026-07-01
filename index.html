@@ -235,6 +235,7 @@
     button { width: 100%; justify-content: center; }
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -283,7 +284,10 @@
   <div id="outputArea" style="display:none;">
     <div class="output-label-row">
       <label for="output" style="margin-bottom:0;">结果（Tab 分隔，可直接粘贴进 Excel）</label>
-      <button class="btn-ghost" onclick="copyResult()" style="padding:5px 12px; font-size:12px;">复制全部</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-ghost" onclick="copyResult()" style="padding:5px 12px; font-size:12px;">复制全部</button>
+        <button class="btn-ghost" onclick="exportExcel()" style="padding:5px 12px; font-size:12px;">导出 Excel</button>
+      </div>
     </div>
     <textarea id="output" readonly></textarea>
   </div>
@@ -357,6 +361,33 @@ function loadSample() {
     '40E79345AEEE\n40E79345AEEF\n40E79345AEF0\n40E79345AEF1\n40E79345AEF2\nINVALID_MAC\n40E79345AEF3';
   document.getElementById('pkg').value     = 'com.qcode.tvvoicehelp';
   document.getElementById('channel').value = '387';
+}
+
+function exportExcel() {
+  const val = document.getElementById('output').value.trim();
+  if (!val) { showToast('没有可导出的数据'); return; }
+
+  // 构建数据行：第一行为表头
+  const rows = [['包名', '渠道', 'MAC']];
+  val.split('\n').forEach(line => {
+    const parts = line.split('\t');
+    if (parts.length === 3) rows.push(parts);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // 列宽：包名宽一些，渠道窄，MAC 中等
+  ws['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 20 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  const channel = document.getElementById('channel').value.trim() || '0';
+  const count   = rows.length - 1; // 减去表头行
+  const filename = `语音MAC报备-${channel}-${count}条.xlsx`;
+
+  XLSX.writeFile(wb, filename);
+  showToast('Excel 已下载 ✓');
 }
 
 function showToast(msg) {
